@@ -1,97 +1,80 @@
-:root {
-    --gold: #f59e0b;
-    --bg: #0f172a;
-    --red: #ef4444;
+const leverBall = document.getElementById('leverBall');
+const leverArm = document.getElementById('leverArm');
+const statusText = document.getElementById('status');
+const reels = [document.getElementById('reel1'), document.getElementById('reel2'), document.getElementById('reel3')];
+
+let participants = Array.from({length: 100}, (_, i) => (i + 1).toString().padStart(3, '0'));
+let isPulling = false;
+let isSpinning = false;
+
+// LEVER LOGIC
+leverBall.addEventListener('mousedown', (e) => {
+    if (isSpinning) return;
+    isPulling = true;
+});
+
+window.addEventListener('mousemove', (e) => {
+    if (!isPulling) return;
+
+    // Calculate pull distance (capped at 90 degrees)
+    let pullAmount = Math.min(Math.max(e.movementY * 2, 0), 90); 
+    leverArm.style.transform = `rotateX(${pullAmount}deg)`;
+
+    // Trigger point
+    if (pullAmount >= 80) {
+        triggerSpin();
+    }
+});
+
+window.addEventListener('mouseup', () => {
+    if (!isPulling) return;
+    isPulling = false;
+    // Snap back animation
+    leverArm.style.transition = "transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275)";
+    leverArm.style.transform = `rotateX(0deg)`;
+    setTimeout(() => leverArm.style.transition = "none", 400);
+});
+
+function triggerSpin() {
+    if (isSpinning) return;
+    isSpinning = true;
+    isPulling = false;
+    
+    statusText.innerText = "GOOD LUCK!";
+    
+    const winnerIndex = Math.floor(Math.random() * participants.length);
+    const winningNumber = participants[winnerIndex];
+    participants.splice(winnerIndex, 1);
+
+    reels.forEach((reel, i) => {
+        setTimeout(() => {
+            animateReel(reel, winningNumber[i], i === 2);
+        }, i * 1000);
+    });
 }
 
-body {
-    background-color: var(--bg);
-    color: white;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-    margin: 0;
-    overflow: hidden;
+function animateReel(reel, finalDigit, isLast) {
+    let count = 0;
+    const interval = setInterval(() => {
+        reel.innerHTML = `<div class="number">${Math.floor(Math.random() * 10)}</div>`;
+        count++;
+        if (count > 25) {
+            clearInterval(interval);
+            reel.innerHTML = `<div class="number" style="color: #ef4444">${finalDigit}</div>`;
+            if (isLast) {
+                isSpinning = false;
+                statusText.innerText = "JACKPOT!";
+                recordWinner(reels.map(r => r.innerText).join(''));
+            }
+        }
+    }, 60);
 }
 
-.machine-body {
-    display: flex;
-    align-items: center;
-    gap: 40px;
-    background: #334155;
-    padding: 40px;
-    border-radius: 20px;
-    border: 8px solid #475569;
-    position: relative;
+function recordWinner(num) {
+    const list = document.getElementById('winnerList');
+    const li = document.createElement('li');
+    li.style.padding = "5px 0";
+    li.style.borderBottom = "1px solid #444";
+    li.innerHTML = `<span style="color:#22c55e">#${num}</span> - Win!`;
+    list.prepend(li);
 }
-
-.slot-window {
-    display: flex;
-    gap: 15px;
-    background: #000;
-    padding: 20px;
-    border-radius: 10px;
-    border: 4px solid var(--gold);
-}
-
-.reel {
-    width: 100px;
-    height: 130px;
-    background: #fff;
-    border-radius: 5px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-}
-
-.number { font-size: 80px; font-weight: bold; color: #000; }
-
-/* LEVER STYLES */
-.lever-system {
-    position: relative;
-    width: 60px;
-    height: 200px;
-}
-
-.lever-track {
-    position: absolute;
-    left: 25px;
-    width: 10px;
-    height: 100%;
-    background: #1e293b;
-    border-radius: 5px;
-}
-
-.lever-arm {
-    position: absolute;
-    left: 22px;
-    top: 0;
-    width: 16px;
-    height: 120px;
-    background: #94a3b8;
-    border-radius: 8px;
-    transform-origin: bottom center;
-    transition: transform 0.1s ease-out;
-    cursor: grab;
-    z-index: 5;
-}
-
-.lever-ball {
-    position: absolute;
-    top: -30px;
-    left: -12px;
-    width: 40px;
-    height: 40px;
-    background: var(--red);
-    border-radius: 50%;
-    box-shadow: inset -5px -5px 10px rgba(0,0,0,0.5), 0 0 10px var(--red);
-}
-
-.lever-arm:active { cursor: grabbing; }
-
-/* SIDEBAR & TITLE */
-.title { color: var(--gold); text-align: center; margin-bottom: 20px; }
-.winners-sidebar { width: 220px; background: rgba(0,0,0,0.4); padding: 20px; border-radius: 10px; margin-left: 50px; height: 400px; overflow-y: auto; }
